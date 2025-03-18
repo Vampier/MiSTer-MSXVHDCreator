@@ -16,22 +16,22 @@ fi
 
 echo -e "\e[1;34m=== Starting Disk Partitioning Process ===\e[0m"
 
-# Check and create directories if they don't exist, set permissions
-echo "Checking directories for partition files in $SCRIPT_DIR..."
-if [ ! -d "$DIR1" ]; then
-    mkdir -p "$DIR1"
-    chmod 777 "$DIR1"
-    echo -e "\e[1;32mCreated:\e[0m $DIR1 with full access (rwxrwxrwx)"
-else
-    echo -e "\e[1;33mDirectory already exists:\e[0m $DIR1 (skipping creation)"
-fi
-if [ ! -d "$DIR2" ]; then
-    mkdir -p "$DIR2"
-    chmod 777 "$DIR2"
-    echo -e "\e[1;32mCreated:\e[0m $DIR2 with full access (rwxrwxrwx)"
-else
-    echo -e "\e[1;33mDirectory already exists:\e[0m $DIR2 (skipping creation)"
-fi
+# Function to check and create directories
+check_and_create_dir() {
+    local dir=$1
+    echo "Checking directory: $dir"
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+        chmod 777 "$dir"
+        echo -e "\e[1;32mCreated:\e[0m $dir with full access (rwxrwxrwx)"
+    else
+        echo -e "\e[1;33mDirectory already exists:\e[0m $dir (skipping creation)"
+    fi
+}
+
+# Check and create required directories
+check_and_create_dir "$DIR1"
+check_and_create_dir "$DIR2"
 echo "Place files in $DIR1 and $DIR2 to copy to the respective partitions."
 
 # Function to list available devices under 257GB
@@ -45,6 +45,15 @@ list_devices() {
     fi
 }
 
+# Function to prompt user for confirmation
+prompt_confirmation() {
+    local message=$1
+    local response
+    read -p "$message (y/N): " response
+    [[ "$response" =~ ^[Yy]$ ]]
+}
+
+# Main script starts here
 list_devices
 echo "Available devices:"
 PS3="Select a device by number (or 'q' to quit): "
@@ -59,12 +68,10 @@ select DEVICE in "${DEVICES[@]}" "Quit"; do
     else
         echo -e "\e[1;31mInvalid selection.\e[0m Please choose a number from the list or 'q' to quit."
     fi
-
 done
 
 echo -e "\e[1;31mWARNING:\e[0m All data on $DEVICE will be erased."
-read -p "Confirm selection (y/N): " CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+if ! prompt_confirmation "Confirm selection"; then
     echo -e "\e[1;33mProcess aborted by user.\e[0m"
     exit 0
 fi
@@ -104,7 +111,6 @@ for i in {1..5}; do
     fi
     echo "Waiting for partitions... (Attempt $i/5)"
     sleep 2
-
 done
 
 if [ ! -e "$PARTITION1" ] || [ ! -e "$PARTITION2" ]; then
